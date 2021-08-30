@@ -1,0 +1,34 @@
+---
+layout: post
+title: "[devs] Logstash 위경도 좌표변환 for Kibana Map"
+subtitle: SUBTITLE
+categories: devs
+tags: devs_else
+comments: true
+---  
+
+보통 우리가 가지고 있는 **String형 위경도 좌표**를 키바나 맵에 뿌리기 위해선 바로 사용가능 한것이 아니라  
+**geo-point type**으로 바꿔줘야 kibana map이 읽어올 수 있는데 이 과정을 한번 정리해보겠습니다.
+
+---
+
+우선 현재 text타입인 위경도 좌표를 알맞게 변환해 넣을 공간인 **geo-point**를 dev tools 에서 다음과 같은 코드를 통해 만들어주어야 합니다.  
+![elastic_geopoint_devtools](/assets/elastic_geopoint_devtools.jpg){: width="300", height="220"}
+
+다음으로, 위 과정에서 만든 인덱스에 데이터를 넣기위해 로그스태시에서 사용할 conf file을 확인해보겠습니다.
+<br>
+![logstash_conf](/assets/logstash_conf.jpg){: width="600", height="1200"}  
+<br>
+사실 중요한건 아래 코드입니다.
+<div class="colorscripter-code" style="color:#010101;font-family:Consolas, 'Liberation Mono', Menlo, Courier, monospace !important; position:relative !important;overflow:auto"><table class="colorscripter-code-table" style="margin:0;padding:0;border:none;background-color:#fafafa;border-radius:4px;" cellspacing="0" cellpadding="0"><tr><td style="padding:6px;border-right:2px solid #e5e5e5"><div style="margin:0;padding:0;word-break:normal;text-align:right;color:#666;font-family:Consolas, 'Liberation Mono', Menlo, Courier, monospace !important;line-height:130%"><div style="line-height:130%">1</div><div style="line-height:130%">2</div><div style="line-height:130%">3</div><div style="line-height:130%">4</div><div style="line-height:130%">5</div><div style="line-height:130%">6</div></div></td><td style="padding:6px 0;text-align:left"><div style="margin:0;padding:0;color:#010101;font-family:Consolas, 'Liberation Mono', Menlo, Courier, monospace !important;line-height:130%"><div style="padding:0 6px; white-space:pre; line-height:130%">mutate&nbsp;{&nbsp;convert&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;{<span style="color:#63a35c">'lat'</span>&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;<span style="color:#63a35c">'float'</span>}&nbsp;}</div><div style="padding:0 6px; white-space:pre; line-height:130%">mutate&nbsp;{&nbsp;convert&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;{<span style="color:#63a35c">'lon'</span>&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;<span style="color:#63a35c">'float'</span>}&nbsp;}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div><div style="padding:0 6px; white-space:pre; line-height:130%">mutate&nbsp;{</div><div style="padding:0 6px; white-space:pre; line-height:130%">&nbsp;&nbsp;&nbsp;&nbsp;add_field&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;{<span style="color:#63a35c">'[location-geo][lat]'</span>&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;<span style="color:#63a35c">'%{lat}'</span>}</div><div style="padding:0 6px; white-space:pre; line-height:130%">&nbsp;&nbsp;&nbsp;&nbsp;add_field&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;{<span style="color:#63a35c">'[location-geo][lon]'</span>&nbsp;<span style="color:#0086b3"></span><span style="color:#a71d5d">=</span><span style="color:#0086b3"></span><span style="color:#a71d5d">&gt;</span>&nbsp;<span style="color:#63a35c">'%{lon}'</span>}</div><div style="padding:0 6px; white-space:pre; line-height:130%">}</div></div><div style="text-align:right;margin-top:-13px;margin-right:5px;font-size:9px;font-style:italic"><a href="http://colorscripter.com/info#e" target="_blank" style="color:#e5e5e5text-decoration:none">Colored by Color Scripter</a></div></td><td style="vertical-align:bottom;padding:0 2px 4px 0"><a href="http://colorscripter.com/info#e" target="_blank" style="text-decoration:none;color:white"><span style="font-size:9px;word-break:normal;background-color:#e5e5e5;color:white;border-radius:10px;padding:1px">cs</span></a></td></tr></table></div>
+원본소스의 중반부분을 가져왔습니다.  
+확인해보면 1번, 2번 라인은 기존 text(String)형이었던 lat과 lon을 geo-point type이 읽을 수 있는 float형으로 변환해주고 있습니다.  
+다음으로 3번부터 6번 라인은 앞서 컬럼을 만들어두었던 곳에 대입하는 코드입니다.  
+이로써 미리 만들어 두었던 location-geo 컬럼의 geo-point type에 lat 과 lon이 대입됩니다.  
+이를통해 기존 텍스트 값이던 위경도 좌표를 키바나 맵에서 읽고 뿌릴 수 있게 되었습니다!
+
+![kibanamap](/assets/kibana_map.jpg)
+
+결과적으로 위 사진과 같이 잘 나오는 것을 확인할 수 있습니다!
+
+감사합니다.

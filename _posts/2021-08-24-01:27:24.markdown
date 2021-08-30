@@ -1,0 +1,37 @@
+---
+layout: post
+title: "[devs] github ssh 접속"
+subtitle: SUBTITLE
+categories: devs
+tags: devs_else
+comments: true
+---  
+
+**깃허브에서 clone**을 할 때 https 뿐만 아니라 **ssh**를 통해 가능한 경우도 있습니다.  
+https는 요즘 8월 에러가 뜨길래 귀찮기도 하고 **ssh**가 편하기도 해서 포스트 해보았습니다!  
+
+---
+
+먼저 터미널을 연 뒤,  
+
+ssh-keygen -t ed25519 -C "githubEmail@email.com"  
+또는   
+ssh-keygen -t rsa -b 4096 -C "githubEmail@email.com"  
+
+를 입력후 정상적으로 동작하면, .ssh폴더에 들어가 id.pub 파일의 내용을 복사합니다  
+-> **[Windows]** clip < id.pub   
+-> **[MAC]** pbcopy < id.pub  
+
+다음으로 깃허브 홈페이지에 들어가 오른쪽 상단의 프로필 클릭후, 세팅에 들어간 뒤 왼쪽메뉴에 ssh and gpg keys 를 들어가면   
+오른쪽 위에 New SSH key버튼이 있습니다.  
+
+눌러 들어간 뒤, 타이틀은 원하는대로 작성하시고 key 부분에 붙여넣기 해주시면 등록은 끝입니다.  
+
+접속설정을 추가로 해주어야 하는데 우선 같은 .ssh 폴더 안에 config파일을 열어준 뒤  
+> Host github.com  
+>> IdentityFile 경로/.ssh/id.pub  
+>> User git   
+
+를 맨 밑에 추가해주시면 정상적으로 클론해올 수 있습니다!  
+
+감사합니다!

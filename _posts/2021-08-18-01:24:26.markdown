@@ -1,0 +1,31 @@
+---
+layout: post
+title: "[devs] scp 우분투 파일전송"
+subtitle: SUBTITLE
+categories: devs
+tags: devs_else
+comments: true
+---  
+
+command를 통해 **우분투로 파일 또는 폴더를 보내고 받기**를 해봅시다!
+
+---
+
+**local to remote (보내기)**  
+scp -P 1234 myfile user@192.168.0.10:/home/location  
+
+서버의 주소는 192.168.0.10, 포트는 1234일 때 user란 아이디로 connect하고 /home/location 에 myfile을 보내고싶을때  
+
+
+(파일 여러개 보내고 싶은경우는 myfile myfile1처럼 이어 붙이기만 하면 됩니다.)  
+(폴더를 보내고 싶을 땐 파일명 위치에 -r 옵션과 함께 폴더명을 적으면 됩니다!)  
+
+---
+
+**remote to local (받기)**  
+scp -P 1234 user@192.168.0.10:/home/location/file1 /loc/  
+
+192.168.0.10:1234 의 서버에 user란 아이디로 연결하고, 서버의 /home/location/ 경로에 위치하고 있는 file1파일을 내컴퓨터의 /loc/ 경로에 받아오고 싶을 때  
+
+(보내기와 마찬가지로 여러파일 받아오고 싶을때, 파일경로를 띄어쓰기로 구분하여 모두 입력하고 쌍따옴표(")로 묶고, 다음위치에 저장하고싶은 경로를 작성하면 됩니다.)  
+(폴더를 받고 싶을 때, -r옵션을 user앞에 넣어준뒤 파일명 대신 폴더명을 적으면 됩니다!)
