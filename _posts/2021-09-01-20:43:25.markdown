@@ -1,0 +1,109 @@
+---
+layout: post
+title: "[paper] C51 review"
+subtitle: SUBTITLE
+categories: paper
+tags: paper_rl
+comments: true
+---  
+
+**C51** - Categorical RL (Distributional RL) [[C51]]
+
+
+**Distributional RL** 에선 기존 Bellman Equation 의 Q-value를 사용하던 것 대신,   
+distribution 기반인 **Distributional Bellman Equation**을 사용한다.  
+
+식은 다음과 같다  
+$Z(x, a)
+\overset{\underset{\mathrm{def}}{}}{=} \!\, R(x, a) + γZ(X', A')$
+
+우리가 익히 알고 있던 $Q(x, a) = R(x, a) + γQ(X', A')$ 과 비교해보면 단순 $Q$에서 $Z$로 바뀐것밖에 없다.  
+하지만 여기에 큰 의미가 있는데,  
+
+$
+Q(x_t, a) := \sum_{i}^{} z_ip_i(x_t, a)
+$
+위 식을 통해 **Z distribution**의 **기대값**을 구하여   기존 Q-value와 같이, **action 마다 하나의 scalar값**(Q-value)을 구하지만  
+Distribution을 통해 **정확한 분포를 추정**하고 그에 따른 Q-value 를 구할 수 있기 때문에 **정확도**가 더 높습니다.
+
+
+Distributional RL은 action마다 Distribution을 갖고 있는데,  
+![value_distribution](/assets/rl_paper/value_distribution.png){: width="400", height="100"}  
+가로축은 분포를 결정하기 위한 하이퍼파라미터로써 support라 불리며,   
+이 논문에선 51로 하였을 때 결과가 가장 좋았기 때문에 논문 이름도 C51이 되었습니다.  
+distribution의 높이는 각 support의 확률을 뜻합니다.
+
+
+![value_distribution](/assets/rl_paper/projection_sub.png){: width="400", height="100"}  
+또한 이 support의 최대, 최소값을 지정해주게 되는데 이 MIN/MAX가 위 그림의 우하단과 같이, 추후 나올 projection에서도 사용됩니다.  
+
+다음으로, action마다 distribution이 존재하기 때문에 모델의 아웃풋은 action 수 * support 수 입니다.  
+결론적으로 이 agent는 각 action의 각 support에 해당하는 확률을 학습하게 됩니다.  
+
+이 support에 대한 확률을 어떻게 학습할 것인가가 중요한 문제인데   
+논문에서는 Wasserstein metric을 사용하려 했지만 그 당시 수렴성을 증명하지 못하였습니다.  
+
+따라서 C51논문에선 다음과 같은 Cross Entropy를 통해 Loss를 구하게 됩니다.  
+$
+Loss = -\sum_{i}^{} m_i\log p_i(x_t, a_t)
+$  
+추후 발표되는 QR-DQN 에서 Wasserstein metric의 수렴성을 증명하게 됩니다.  
+
+학습을 시키기 위해 Target Distribution이 필요한데 이논문에서 핵심인 부분이 바로 이부분 입니다.  
+논문 수식을 차례로 불러오면,   
+$
+\hat{T}z_j ← [r_t + γ_tz_j]^{V_{MAX}}_{V_{MIN}} 
+$
+우선 오른쪽의 $r_t$는 리워드, $γ_t$는 gamma, ${V_{MAX}}$과 ${V_{MIN}}$는 바로 알 수 있듯 support의 최대, 최소값입니다.  
+위 식은 기존 DQN에서 target network 구할때와 비슷해보입니다.  
+
+실제로도 다 똑같지만 ${V_{MAX}}$과 ${V_{MIN}}$으로 인해 support가 최대값보다 크다면 ${V_{MAX}}$로 맞춰주고,  
+support가 최소값보다 작다면 ${V_{MIN}}$로 맞춰주게 됩니다.  
+
+
+$γ_tz_j$를 통해 shirink(보라)되고, $r_t$를 더함(초록)으로써 강제로 맞춰주려하면  
+아래 그림과 같이 support의 범위가 맞지 않게 됩니다.   
+![value_distribution](/assets/rl_paper/support_notEqual.png){: width="400", height="100"}  
+이렇게 되면 같은 Domain에 대해 Cross Entropy Loss를 구해야 하는데 그렇지 않기 때문에 Projection이란 과정을 추가합니다.  
+
+Projection이란 실제 Support가 [1,2,3,4,5]와 같고, Target Distribution의 support가 [1.3, 2.3, 3.5, 4.7, 4.9]이 되었을 때,  
+target Distribution의 support가 1.3인 support의 확률값을 main network의 support 1과 2에 해당하는 곳에 각각 분배하게 됩니다.  
+나누는 기준은 1.3은 1에 가깝기 때문에 더 많이 배분되고 2에는 멀기 때문에 더 적게 배분됩니다.  
+
+해당하는 sudo 코드는 다음과 같습니다.   
+$
+l ← \lfloor{b_j}\rfloor,   u ← \lceil{b_j}\rceil  
+$
+위 수식을 통해 해당 target distribution의 support의 low point와 upper point를 구합니다.  
+예를들면 $b_j$가 3.1일 때, $l$은 3이 되고 $u$는 4가 됩니다. 이를 통해 projection의 핵심기능인 쪼개주기가 가능합니다.  
+
+
+$
+m_l ← m_l + p_j (x_{t+1}, a^∗)(u − b_j)
+$
+$
+m_u ← m_u + p_j (x_{t+1}, a^∗)(b_j − l)
+$
+위 수식을 통해 main support의 거리에 맞게 target support의 값을 알맞는 비율로 쪼개서 나누어주게 됩니다.  
+
+결국 다음 그림과 같아집니다.  
+![value_distribution](/assets/rl_paper/projection_fin.png){: width="400", height="100"}  
+support도 맞춰주었기 때문에 같은 Domain에서 Loss를 구할 수 있게 되었습니다.
+
+
+최종적으로 target network의 모든 Support에 대하여 projection까지 마친 뒤 Cross Entropy Loss를 구하여 Update가 가능합니다.  
+
+
+
+
+
+감사합니다
+
+
+
+
+
+
+
+
+[C51]: https://arxiv.org/abs/1707.06887
