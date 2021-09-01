@@ -113,6 +113,10 @@ exclude:
   - Gemfile.lock
 
 markdown: kramdown
+lsi: false
+excerpt_separator: "\n\n"
+incremental: false
+highlighter: rouge
 
 kramdown:
   footnote_backlink: '&#x21a9;&#xfe0e;'
